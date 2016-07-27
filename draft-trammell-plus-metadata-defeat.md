@@ -1,6 +1,6 @@
 ---
-title: Detecting and Defeating Metadata Injection in TCP/IP
-abbrev: Defeating Metadata
+title: Detecting and Defeating TCP/IP Hypercookie Attacks
+abbrev: Defeating Hypercookies
 docname: draft-trammell-plus-metadata-defeat
 date: 2016-07-29
 category: info
@@ -21,6 +21,7 @@ author:
     email: ietf@trammell.ch
 
 normative:
+  RFC3234:
   RFC6973:
   RFC6994:
   RFC7624:
@@ -50,7 +51,16 @@ informative:
 
 --- abstract
 
-The TCP/IP stack provides many protocols and protocol features that can potentially be abused by on-path attackers to inject metadata about a traffic flow into that traffic flow in band. This document defines a threat model for metadata injection, catalogs protocol features that may be used to achieve it, and provides guidance for defeating this abuse, with an analysis of protocol features that are disabled by the proposed defeat mechanism.
+The TCP/IP stack provides many protocols and protocol features that can
+potentially be abused by on-path attackers to inject metadata about a traffic
+flow into that traffic flow in band. When this injected metadata is provided
+by an entity with knowledge about the natural person associated with a traffic
+flow, it becomes a grave threat to privacy, which we term a hypercookie.
+
+This document defines a threat model for hypercookie injection and hypercookie
+coercion attacks, catalogs protocol features that may be used to achieve them,
+and provides guidance for defeating these attacks, with an analysis of
+protocol features that are disabled by the proposed defeat mechanism.
 
 --- middle
 
@@ -72,9 +82,15 @@ identifier.  We propose a colloquial term for this type of sub-application
 identification: "hypercookie".
 
 The attacker is variably interested in avoiding detection of hypercookie
-techniques, and is variably interested in metadata reliability, but  requires
-that the injected metadata not interfere with normal protocol operation, even
-if the exposed metadata is not used by any far endpoint.
+injection techniques, and is variably interested in metadata reliability, but
+requires that the injected metadata not interfere with normal protocol
+operation, even if the exposed metadata is not used by any far endpoint.
+
+The hypercookie injection attack is technically equivalent to a related
+attack, hypercookie coercion. In this attack, the attacker requires the client
+endpoint to inject the hypercookie itself, and uses in-band verification
+techniques to determine whether the hypercookie was correctly applied,
+blocking traffic which does not carry the hypercookie.
 
 This document is concerned only with identification through hypercookie
 injection at the transport layer, as this is possible even when the
@@ -86,118 +102,174 @@ exploitation of other behaviors in implemented TCP stacks (e.g. as outlined in
 {{blind-tcp-attacks}} may also be used for hypercookie exposure, albeit with
 further risk of connection disruption.
 
-Further, Out-of-band identification methods, e.g. linking a flow's five- or
+Further, out-of-band identification methods, e.g. linking a flow's five- or
 six-tuple with an identifier and using some other protocol to export this
 linkage, is also not considered, as it is practically impossible for users and
 far endpoints to detect and defeat.
 
-The metadata injection techniques presented in this document are emphatically
-not recommended for use on the Internet; this document is intended to educate
+The metadata injection techniques presented in this document are EMPHATICALLY
+NOT RECOMMENDED for use on the Internet; this document is intended to educate
 members of the Internet engineering community about the potential for abuse in
 TCP as defined and deployed.
 
 # Terminology
 
-todo
+As used in this document:
 
-define stateless TCP firewall.
+- "Stateless TCP firewall" refers to a middlebox {{RFC3234}} that selectively
+drops single malformed TCP packets. A stateless TCP firewall can defeat TCP
+metadata injection techniques which rely on noncompliant formation of
+single TCP packets.
 
-define stateful TCP firewall.
+- "Stateful TCP firewall" refers to a middlebox that selectively drops TCP
+packets not conforming to the protocol by modeling the TCP state machine on
+both endpoints. A stateful TCP firewall can defeat TCP metadata injection
+techniques which relies on noncompliant formation of TCP packets and/or
+flows.
 
-define split TCP device.
+- "Split TCP firewall" refers to a middlebox which terminates a TCP connection
+on one its Internet-facing side and opens a separate TCP connection on the
+other side. Split TCP firewalls defeat most of the TCP-specific metadata
+injection techniques in this document.
 
-# Injection abusing Internet Protocol features
+# Metadata Injection Techniques
 
-## Identification using EAP64 addressing
+## Abusing Internet Protocol features
 
-todo: before privacy addressing IPv6 did this automatically. mitigation: don't
+### Identification using EAP64 addressing
+
+todo: before privacy addressing IPv6 did this automatically. how many bits: 48. mitigation: don't
 use EAP64 SLAAC. what breaks: practically nothing, you should already be doing this.
 
-## Identification using DHCPv6
+### Identification using DHCPv6
 
 todo: if attacker can run a dhcpv6 server, can place user identifying
-information in the host part of the address. defeat: disable dhcpv6 on client.
-what breaks: dhcpv6. detection without defeat: analyze assigned address to see
-how persistently it is linked to a user.
+information in the host part of the address. how many bits: < 64 defeat:
+disable dhcpv6 on client. what breaks: dhcpv6. detection without defeat:
+analyze assigned address to see how persistently it is linked to a user.
 
-# Injection abusing Legacy Internet Protocol features
+### Identification using Flow ID
 
-## Fragment Identifier Rewriting
+todo: there are free bits in the IPv6 header, and you can just use them for
+stuff. how many bits: 20. defeat: practically none. impractical defeat: zero
+flow ID. what breaks: anything that uses flowID for ECMP.
 
-todo: does this actually work? rewrite ip id, you get sixteen bits.
-mitigation: none with vanilla IPv4.
+## Abusing legacy Internet Protocol features
 
-# Injection abusing Transmission Control Protocol Features
+### Fragment Identifier Rewriting
 
-## Initial Sequence Number Rewriting
+todo: does this actually work? rewrite ip id. how many bits: 16. mitigation:
+none with vanilla IPv4. use header modification detection as in hiccups.
 
-todo: initial sequence number can be rewritten for 32 bits of identification
-per flow.  can use subsequent connections to the same server to leak bits
-serially, with coding for error correction. requires flow state tracking to
-rewrite all sequence numbers in the flow. does not work if other ISN rewriting
-proxies live along the path, signal does not traverse split TCP devices.
-mitigation: none with vanilla TCP. use header modification detection as in
-hiccups.
+## Abusing Transmission Control Protocol Features
 
-## Urgent Pointer Identification
+### Initial Sequence Number Rewriting
+
+todo: initial sequence number can be rewritten. how many bits: 32, associated
+with five-tuple. requires flow state tracking to rewrite all sequence numbers
+in the flow. does not work if other ISN rewriting proxies live along the path,
+signal does not traverse split TCP devices. mitigation: none with vanilla TCP.
+use header modification detection as in hiccups.
+
+### Urgent Pointer Identification
 
 todo: urgent pointer not broken in most cases without split TCP, because it
-would require a checksum recalc. need more data. you get 16 bits, but can use
-subsequent connections to the same server to leak bits serially, with coding
-for error correction. mitigation: configure all firewalls to zero urgent
-pointer when URG flag not set. what breaks: other efforts to reuse urgent
-pointer.
+would require a checksum recalc. need more data. how many bits: 16, associated
+with packet and/or five-tuple. mitigation: configure all firewalls to zero
+urgent pointer when URG flag not set. what breaks: other efforts to reuse
+urgent pointer.
 
-## Piggybacked Experimental TCP Options
+### Piggybacked Experimental TCP Options
 
 todo: find a packet with enough headroom between segment and MTU, add an
 experimental TCP option with metadata. you can even allocate an ExId
 {{RFC6994}} and give in an innocuous name so people won't look too closely at
 your traffic. option will be ignored by far endpoint. won't pass certain
-middleboxes or firewalls. mitigation: aggressive deployment of stateless TCP
-firewalls configured to drop all experimental options not in use on the
-network. what breaks: TCP Fast Open, as some implementations still use the
-experimental option; anything your stateless firewalls don't understand, such
-as other TCP options and transport protocols.
+middleboxes or firewalls. how many bits: up to max tcp option size less
+overhead, depending on mtu headroom, associated with packet and/or five-tuple.
+mitigation: aggressive deployment of stateless TCP firewalls configured to
+drop all experimental options not in use on the network. what breaks: TCP Fast
+Open, as some implementations still use the experimental option; anything your
+stateless firewalls don't understand, such as other TCP options and transport
+protocols.
 
-## Empty Segments with Experimental TCP Options
+### Empty Segments with Experimental TCP Options
 
 todo: as above, but if you can't find a packet with enough headroom you can
-just generate a pure ACK and stick an option on it. mitigation: as above. what
-breaks: as above.
+just generate a pure ACK and stick an option on it. how many bits: as above,
+but lack of concern about headroom means you can get up to max tcp option
+bits, associated with a five-tuple. mitigation: as above. what breaks: as
+above.
 
-## Bad Checksum Segments
+### Low-Order Bits in TCP Timestamps
+
+todo: not many bits per packet, useful for longer flows. idea: TCP packet
+generation rate is lower than the timestamp frequency. use n low-order bits
+per packet. how many bits: n, for low n, associated with a packet and/or five-
+tuple. mitigation: disable or strip timestamp options. what breaks: rtt
+estimation and paws, passive timestamp measurement.
+
+### Out of Window Segments
+
+todo: send segments not generated by client wildly out of window, place
+metadata in segment. out of window segments will traverse any device not
+looking at TCP state, but will not pass any stateful TCP firewall or split TCP
+device. they will be dropped by the endpoint. how many bits: as many as you
+can fit in a segment, associated with a five-tuple. mitigation: aggresive
+deployment of stateful TCP firewalls will cause early drop of out of window
+segments. what breaks: anything your stateful firewalls don't understand, such
+as other TCP options and transport protocols.
+
+### Bad Checksum Segments
 
 todo: send segments not generated by client with a bad checksum, place
 metadata in segment. bad checksum segments will traverse any device not
-looking at tcp, but will not pass any stateless or stateful TCP firewall  or
-split TCP device. they will be dropped by the endpoint. mitigation: aggressive
-deployment of stateless TCP firewalls will cause early drop of bad checksum
+looking at tcp, but will not pass any stateless or stateful TCP firewall or
+split TCP device. they will be dropped by the endpoint. how many bits: as many
+as you can fit in a segment, associated with a five-tuple.. mitigation: aggressive deployment of stateless
+TCP firewalls will cause early drop of bad checksum segments. what breaks:
+anything your stateless firewalls don't understand, such as other TCP options
+and transport protocols.
+
+### Christmas Tree Segments
+
+todo: send segments not generated by client with silly flag combinations,
+place metadata in segment. christmas tree segments will traverse any device
+not looking at TCP, but will not pass any properly configured stateless or
+stateful TCP firewall or split TCP device. careless selection of flags may
+lead to state breakage, so this method is brittle compared to the other ones.
+how many bits: as many as you can fit in a segment. mitigation: aggressive
+deployment of stateless TCP firewalls will cause early drop of christmas tree
 segments. what breaks: anything your stateless firewalls don't understand,
 such as other TCP options and transport protocols.
 
-## Christmas Tree Segments
 
-todo: send segments not generated by client with silly flag combinations,
-place metadata in segment. out of window segments will traverse any device not
-looking at TCP, but will not pass any properly configured stateless or
-stateful TCP firewall or split TCP device. careless selection of flags may
-lead to state breakage, so this method is brittle compared to the other ones.
-mitigation: aggressive deployment of stateless TCP firewalls will cause early
-drop of christmas tree segments.
 
-# Recommendations
+# Combination of Techniques
+
+todo: two ways to combine these techniques to get more bits per packet and/or
+per flow. first: multiple packets per flow with encoding for error correction
+and ordering. second: multiple techniques in a single packet. coding can also
+help with making it easier to recognize that a packet has been successfully
+hypercookie-injected or -coerced.
+
+# Recommendations and Outlook
 
 todo: bad news: users can't do anything to mitigate. can detect if they test
 against their own far endpoints. altruistic mitigation: tcp-checking firewalls
-everywhere. downside:
+everywhere. downside: firewalls in places you don't otherwise need them, with
+further ossification of TCP and reduction in deployability of new transport
+protocols and protocol features.
 
 # IANA Considerations
 
-This document has no actions for IANA [EDITOR'S NOTE: please remove this section at publication.]
+This document has no actions for IANA [EDITOR'S NOTE: please remove this
+section at publication.]
 
 # Security Considerations
 
+tl;dr everything is ruined
+
 # Acknowledgments
 
-mami ack. plus bof participants ack.
+mami ack. plus bof participants ack. ted hardie. the staff at mother.dk for bringing the pizza.
