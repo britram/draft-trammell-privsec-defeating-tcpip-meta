@@ -94,8 +94,7 @@ and trivial combination of metadata injection attacks, leads to a
 recommendation to add cryptographic integrity protection to transport layer
 headers to defend against injection attacks.
 
-tl;dr: at least with respect to the present state of the transport protocol
-stack, everything is ruined.
+tl;dr: at least with respect to metadata injection in the current Internet protocol stack, everything is ruined.
 
 --- middle
 
