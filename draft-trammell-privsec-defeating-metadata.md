@@ -94,7 +94,8 @@ and trivial combination of metadata injection attacks, leads to a
 recommendation to add cryptographic integrity protection to transport layer
 headers to defend against injection attacks.
 
-tl;dr: at least with respect to metadata injection in the current Internet protocol stack, everything is ruined.
+tl;dr: at least with respect to metadata injection in the current Internet
+protocol stack, everything is ruined.
 
 --- middle
 
@@ -445,7 +446,10 @@ section at publication.]
 
 # Security Considerations
 
-This document 
+This document outlines vulnerabilities in the TCP/IP protocol stack as
+deployed to a type of attack described in {{introduction}}. Exploitation of
+these vulnerabilities can be used to expose identifying information about
+users of a network to third parties; the document discusses general and specific techniques to mitigate the impact of these exploits.
 
 # Acknowledgments
 
