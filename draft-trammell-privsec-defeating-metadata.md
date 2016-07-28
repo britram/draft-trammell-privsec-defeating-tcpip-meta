@@ -86,13 +86,16 @@ a grave threat to privacy, which we term a hypercookie.
 This document defines a threat model for hypercookie injection and hypercookie
 coercion attacks, catalogs protocol features that may be used to achieve them,
 and provides guidance for defeating these attacks, with an analysis of
-protocol features that are disabled by the proposed defeat mechanism. The
-relative ease of injecting metadata for attackers on path, and trivial
-combination of metadata injection attacks, makes these attacks impractical to
-defend against unless transport layer headers are cryptographically integrity
-protected. 
+protocol features that are disabled by the proposed defeat mechanism. 
 
-tl;dr: everything is ruined.
+The deployment of firewalls that detect and reject abuse of protocol features
+can help, but the relative ease of injecting metadata for attackers on path,
+and trivial combination of metadata injection attacks, leads to a
+recommendation to add cryptographic integrity protection to transport layer
+headers to defend against injection attacks.
+
+tl;dr: at least with respect to the present state of the transport protocol
+stack, everything is ruined.
 
 --- middle
 
@@ -120,15 +123,15 @@ injection techniques, and is variably interested in metadata reliability, but
 requires that the injected metadata not interfere with normal protocol
 operation, even if the exposed metadata is not used by any far endpoint.
 
-The hypercookie injection attack is related to another, technically equivalent
+The hypercookie injection attack is related to another, largely equivalent
 attack, hypercookie coercion. In this attack, the attacker requires the client
-endpoint to inject the hypercookie itself, and uses in-band verification
+endpoint to expose the hypercookie itself, and uses in-band verification
 techniques to determine whether the hypercookie was correctly applied,
-blocking traffic which does not carry the hypercookie.
+blocking traffic which does not carry it.
 
 This document is concerned only with identification through hypercookie
-injection at the transport layer, as this is possible even when the
-application layer is encrypted using TLS or other encryption schemes that
+injection at the transport and network layers, as this is possible even when
+the application layer is encrypted using TLS or other encryption schemes that
 operate above the transport layer. Application layer hypercookie injection is
 out of scope, as are identification methods using traffic fingerprinting. It
 is also concerned only with TCP as defined, not as implemented and deployed;
@@ -185,18 +188,19 @@ that could also be used for metadata injection, and as such provides a
 concrete implementation of fail fast and hard, mitigating TCP attacks as in
 {{evil-tcp}}.
 
-Widespread deployment transport protocol proposals that encrypt most or all of
-the transport layer headers such as QUIC, or proposals to enable generalized
-transport layer encryption such as PLUS, would also mitigate the TCP attacks
-in {{evil-tcp}}.
+The deployment of middleboxes to drop malformed packets or zero fields that
+may be used in hypercookie attacks may help to reduce the rate of success and
+therefore the incentive to perform hypercookie injection. However, this must
+be balanced against the cost of additional management complexity and the risk
+of further ossification of the Internet protocol stack through even more
+widespread deployment of transport-aware, stateful, packet-modifying
+middleboxes.
 
-Failing these general mitigations, the deployment of middleboxes to drop
-malformed packets or zero fields that may be used in hypercookie attacks may
-help to reduce the rate of success and therefore the incentive to perform
-hypercookie injection. However, this must be balanced against the cost of
-additional management complexity and the risk of further ossification of the
-Internet protocol stack through even more widespread deployment of transport-
-aware, stateful, packet-modifying middleboxes.
+The best defense comes from evolving the stack: Widespread deployment
+transport protocol proposals that encrypt most or all of the transport layer
+headers such as QUIC, or proposals to enable generalized transport layer
+encapsulation and encryption such as PLUS, would effectively mitigate the TCP
+attacks in {{evil-tcp}}. 
 
 # Metadata Injection Techniques {#evil}
 
@@ -425,6 +429,15 @@ We therefore conclude that the most practical mitigation of this threat is the
 development and deployment of transport protocols that provide cryptographic
 integrity protection and/or confidentiality for their headers, in order to
 prevent hypercookie injection at the transport layer.
+
+Note that these mitigations can only detect, but not prevent, hypercookie
+coercion attacks: if an attacker can successfully block a client's access to
+the Internet to enforce hypercookie coercion, removal of metadata will not
+restore that access, as the attack is carried out through nontechnical
+relationships between the attacker and the target. We can only hope that
+raising awareness and bringing transparency to the potential for hypercookie
+coercion attacks makes them less likely to be successful.
+
 
 # IANA Considerations
 
