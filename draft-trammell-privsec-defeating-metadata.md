@@ -1,7 +1,7 @@
 ---
 title: Detecting and Defeating TCP/IP Hypercookie Attacks
 abbrev: Defeating Hypercookies
-docname: draft-trammell-plus-metadata-defeat
+docname: draft-trammell-privsec-defeating-metadata
 date: 2016-07-29
 category: info
 
