@@ -77,16 +77,22 @@ informative:
 
 --- abstract
 
-The TCP/IP stack provides many protocols and protocol features that can
-potentially be abused by on-path attackers to inject metadata about a traffic
-flow into that traffic flow in band. When this injected metadata is provided
-by an entity with knowledge about the natural person associated with a traffic
-flow, it becomes a grave threat to privacy, which we term a hypercookie.
+The TCP/IP stack provides protocol features that can potentially be abused by
+on-path attackers to inject metadata about a traffic flow into that traffic
+flow in band. When this injected metadata is provided by an entity with
+knowledge about the natural person associated with a traffic flow, it becomes
+a grave threat to privacy, which we term a hypercookie.
 
 This document defines a threat model for hypercookie injection and hypercookie
 coercion attacks, catalogs protocol features that may be used to achieve them,
 and provides guidance for defeating these attacks, with an analysis of
-protocol features that are disabled by the proposed defeat mechanism.
+protocol features that are disabled by the proposed defeat mechanism. The
+relative ease of injecting metadata for attackers on path, and trivial
+combination of metadata injection attacks, makes these attacks impractical to
+defend against unless transport layer headers are cryptographically integrity
+protected. 
+
+tl;dr: everything is ruined.
 
 --- middle
 
@@ -96,16 +102,18 @@ This document considers a specific threat model related to the pervasive
 surveillance threat model defined in {{RFC7624}} and correlation and
 identification of users as defined in sections 5.2.1 and 5.2.2, respectively,
 of {{RFC6973}}. The attacker has access to the access network(s) connecting a
-user to the Internet, by collaborating with, coopting, or being the user's
-access provider. It can see all inbound and outbound traffic from the user via
-that network, and can modify inbound and outbound packets to the user. The
-attacker would like to add metadata to the user's traffic flows in order to
-expose that metadata to networks the user communicates with, where it will be
-passively observed, and it would like this metadata to appear in layers 3 or
-4, in order to be completely transparent to the application. For purposes of
-this analysis, we presume this metadata is a user identifier or partial user
-identifier.  We propose a colloquial term for this type of sub-application
-identification: "hypercookie". This can be seen as a third-party implementation of the metadata insertion pattern described in {{I-D.hardie-privsec-metadata-insertion}}.
+user to the Internet, by collaborating with, coopting, or otherwise exercising
+influence over the user's access provider. It can see all inbound and outbound
+traffic from the user via that network, and can modify inbound and outbound
+packets to the user. The attacker would like to add metadata to the user's
+traffic flows in order to expose that metadata to networks the user
+communicates with, where it will be passively observed, and it would like this
+metadata to appear in layers 3 or 4, in order to be completely transparent to
+the application. For purposes of this analysis, we presume this metadata is a
+user identifier or partial user identifier.  We propose a colloquial term for
+this type of sub-application identification: "hypercookie". This can be seen
+as a third-party implementation of the metadata insertion pattern described in
+{{I-D.hardie-privsec-metadata-insertion}}.
 
 The attacker is variably interested in avoiding detection of hypercookie
 injection techniques, and is variably interested in metadata reliability, but
@@ -214,8 +222,8 @@ Internet and as such can be passively used as identifying information along the 
 
 When present, this technique provides 47 bits of identifying information on a
 per-node basis, present on each packet from the node. Access network
-providers cannot force the use of EUI-64 addressing; however, see {{evil-
-ip6-nat}} for a related technique.
+providers cannot force the use of EUI-64 addressing; however, see 
+{{evil-ip6-nat}} for a related technique.
 
 The mitigation is to disable EUI-64 based SLAAC at end hosts, replacing it
 with {{RFC4941}} privacy addressing and/or DHCPv6 {{RFC3315}}. This is current
@@ -257,13 +265,13 @@ addresses and a user.
 ### Identification using Flow ID
 
 {{RFC6437}} defines the IPv6 flow label, a 20-bit field in every IPv6 packet.
-{{It is intended to replace source and destination port in equal-cost
-{{multipath routing (ECMP) and other load distribution schemes. However, the
-{{flow label can be freely rewritten by middleboxes on path.
+It is intended to replace source and destination port in equal-cost
+multipath routing (ECMP) and other load distribution schemes. However, the
+flow label can be freely rewritten by middleboxes on path.
 
-This technique provides up to 20 bits of identifying information per packet, with
-the caveat that applying different flow labels to different packets within a
-flow may impair transport layer performance due to reordering.
+This technique provides up to 20 bits of identifying information per packet,
+with the caveat that applying different flow labels to different packets
+within a flow may impair transport layer performance due to reordering.
 
 No user-initiated mitigation is possible with the present stack. Header
 modification detection as in {{hiccups}}, and/or the deployment of middleboxes
@@ -392,7 +400,7 @@ ossification.
 
 ### Bad Checksum Segments
 
-Similar to {#evil-tcp-oow}, a middlebox can place segments with bad checksums
+Similar to {{evil-tcp-oow}}, a middlebox can place segments with bad checksums
 sharing a given 5-tuple on the wire. These segments should traverse any device
 not looking at TCP state, and be ignored by the receiver.
 
@@ -407,14 +415,16 @@ to mitigation.
 
 # Recommendations and Outlook
 
-Based on an analysis of the hypercookie attacks listed in this document, the
+An analysis of the hypercookie attacks listed in this document, and the
 ability to combine them freely to improve hypercookie resilience and capacity,
-and the relatively heavy-handed and impractical requirement for the aggressive
-altruistic deployment of TCP- modifying firewalls in order to defend against it at
-scale, we are forced to conclude that the most practical mitigation of this
-threat is the development and deployment of transport protocols that encrypt
-their headers, in order to prevent hypercookie injection at the transport
-layer.
+leads to a relatively bleak outlook. Mitigating the threat at scale with the
+stack as presently deployed requires impractically aggressive, altruistic
+deployment of TCP-modifying firewalls.
+
+We therefore conclude that the most practical mitigation of this threat is the
+development and deployment of transport protocols that provide cryptographic
+integrity protection and/or confidentiality for their headers, in order to
+prevent hypercookie injection at the transport layer.
 
 # IANA Considerations
 
@@ -423,7 +433,7 @@ section at publication.]
 
 # Security Considerations
 
-[EDITOR'S NOTE todo: write me: tl;dr everything is ruined]
+This document 
 
 # Acknowledgments
 
