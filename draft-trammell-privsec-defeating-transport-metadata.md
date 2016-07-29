@@ -6,8 +6,8 @@ date: 2016-07-29
 category: info
 
 ipr: trust200902
-area: Transport
-workgroup: PLUS BoF
+area: Internet Architecture Board
+workgroup: Privacy and Security Program
 keyword: Internet-Draft
 
 stand_alone: yes
